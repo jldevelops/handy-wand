@@ -1,0 +1,175 @@
+{
+    "doc_url": "https://raw.githubusercontent.com/jldevelops/handy-wand/main/description.json",
+    init: `{
+        $OSTABLE_DEP_ADDR = params.ostable_dep OTHERWISE 'IPZULHNHOIZHTQYGUPXBJLLRAOCH5BBL';
+        $OSTABLE_CURVE_ADDR = params.curve OTHERWISE '26XAPPPTTYRIOSYNCUV3NS2H57X5LZLJ';
+        $OSWAP_POOL_ADDR = params.oswap_pool OTHERWISE 'AR3SHS7SFH3PF6ZM6UIF7HWIV44TZ46H';
+        $STABLE_ASSET = var[$OSTABLE_DEP_ADDR]['asset'];
+        $OWNER_ADDR = params.owner;
+        if(!$OWNER_ADDR)
+            bounce('no owner');
+        $addDeposit = $id =>{
+            $deposits = var['deposits'] otherwise [];
+            $deposits[] = $id;
+            var['deposits'] = $deposits;
+        };
+        $removeDeposit = $ind =>{
+            $deposits = var['deposits'] otherwise [];
+            delete($deposits, $ind);
+            var['deposits'] = $deposits;
+        };
+    }`,
+    "messages": {
+        "cases": [
+            {      
+                if: `{(trigger.data.interest AND trigger.address == $OWNER_ADDR) OR var['index']}`,
+                init: `{
+                    $ind = var['index'] otherwise 0;
+                    $deposits = var['deposits'];
+                    $id = $deposits[$ind];
+                }`,
+                "messages": [
+                    {
+                        if: `{$id}`,
+                        "app": "payment",
+                        "payload": {
+                            "asset": 'base',
+                            "outputs": [
+                                {
+                                    "address": "{$OSTABLE_DEP_ADDR}",
+                                    "amount": 1
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        if: `{$id}`,
+                        "app": "data",
+                        "payload": {
+                            "id": "{$id}",
+                        }
+                    },
+                    {
+                        if: `{!$id AND var['swap']}`,
+                        "app": "payment",
+                        "payload": {
+                            "asset": "{$STABLE_ASSET}",
+                            "outputs": [
+                                {
+                                    "address": "{$OSWAP_POOL_ADDR}"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        if: `{!$id AND var['swap']}`,
+                        "app": "data",
+                        "payload": {
+                            "to_aa": "{$OSTABLE_CURVE_ADDR}",
+                            "to": "{$OWNER_ADDR}"
+                        }
+                    },
+                    {
+                        "app": "state",
+                        "state": "{
+                            if($id)
+                                var['index'] = $ind + 1;
+                            else
+                                var['index'] = false;
+                        }"
+                    }
+                ]
+            },
+            {
+                if: `{trigger.address != $OWNER_ADDR}`,
+                "messages": [
+                    {
+                        "app": "state",
+                        "state": "{
+                            response['message'] = 'received';
+                        }"
+                    }
+                ]
+            },
+            {
+                if: `{trigger.data.transfer AND trigger.data.to AND trigger.data.asset AND trigger.data.amount}`,
+                "messages": [
+                    {
+                        "app": "payment",
+                        "payload": {
+                            "asset": 'base',
+                            "outputs": [
+                                {
+                                    "address": 'GV5YXIIRH3DH5FTEECW7IS2EQTAYJJ6S',
+                                    "amount": 1
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "app": "data",
+                        "payload": {
+                            "transfer": "{trigger.data.transfer}",
+                            "to": "{trigger.data.to}",
+                            "asset":`{trigger.data.asset}`,
+                            "amount":`{trigger.data.amount}` 
+                        }
+                    }
+                ]
+            },
+            {
+                if: `{trigger.data.add_dep and trigger.data.id}`,
+                "messages": [
+                    {
+                        "app": "state",
+                        "state": "{
+                            $addDeposit(trigger.data.id);
+                        }"
+                    }
+                ]
+            },
+            {    
+                if: `{trigger.data.swap}`,
+                "messages": [
+                    {
+                        "app": "state",
+                        "state": "{
+                            if(trigger.data.swap == 1)
+                                var['swap'] = 1;
+                            else
+                                var['swap'] = false;
+                        }"
+                    }
+                ]
+            },
+            {
+                            
+                if: `{trigger.data.rm_dep and exists(trigger.data.index)}`,
+                "messages": [
+                    {
+                        "app": "state",
+                        "state": "{
+                            $removeDeposit(trigger.data.index);
+                        }"
+                    }
+                ]
+            },
+            {
+                "if": "{trigger.data.withdraw}",
+                "messages": [
+                    {
+                        "app": "payment",
+                        "payload": {
+                            "asset": "{trigger.data.asset otherwise 'base'}",
+                            "outputs": [
+                                {
+                                    "address": "{trigger.address}"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
