@@ -1,0 +1,16 @@
+{
+	"version": "1.0",
+	"description": "Handy wand, helper to buy bytes with ostable interest",
+	"homepage_url": "https://github.com/jldevelops/handy-wand",
+	"source_url": "https://github.com/jldevelops/handy-wand",
+	"field_descriptions": {
+    		"interest": "Accrue interest from deposits. Set the value to 1.",
+		"withdraw": "Withdraw funds/withdraw interest. Set the value to 1.",
+		"swap": "Set bytes auto-buy. 1 = enable, 2 = disable",
+		"asset": "Asset ID to withdraw (44 characters or base if not set).",
+    		"add_dep": "Add ostable deposit. Set the value to 1.",
+    		"rm_dep": "Remove ostable deposit. Set the value to 1.",
+		"id": "Ostable deposit ID",
+		"index": "Deposit index to remove."
+	}
+}
